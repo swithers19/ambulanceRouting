@@ -1,5 +1,5 @@
 from typing import List, Dict
-import googlemaps
+import googlemaps, csv
 
 from private import APIKEY
 from lib.Hospital import Hospital
@@ -54,3 +54,15 @@ def serialize(obj):
         return serial
 
     return obj.__dict__
+
+
+def writeCSV(filename, csv_data):
+    csv_columns = ['ppn', 'pickup_lat', 'pickup_long', 'hospital', 'time', 'distance']
+    try:
+        with open(filename, 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+            writer.writeheader()
+            for data in csv_data:
+                writer.writerow(data)
+    except IOError:
+        print("I/O error")

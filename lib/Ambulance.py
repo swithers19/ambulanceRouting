@@ -1,5 +1,5 @@
 from typing import List, Optional, Set, Dict
-import csv
+import csv, operator
 
 from lib.Hospital import HospitalCollection
 from lib.utils import hospitalTransfers
@@ -31,7 +31,7 @@ class Transfer():
     def getFirstHospitalData(self):
         for trans in self.feasible_transfers:
             if trans['hospital'] == self.hospital:
-                return trans
+                return [trans]
     
     def getHospitalsOfDataType(self, hosp_type):
         return [trans for trans in self.feasible_transfers if 
@@ -70,9 +70,12 @@ class TransferCollection():
 
     def generateJSONData(self):
         '''Create a dictionary ready for JSON encoding
+
+        returns: dictionary of each transfer and associated feasible lists
         '''
         transfers_formatted = list()
-        for transfer in self._items:
+        items_sorted = sorted(self._items, key=lambda x: int(x.id))
+        for transfer in items_sorted:
             transfer_dict = {
                 'ppn': transfer.id,
                 'pickup_lat': transfer.pickup_lat,
@@ -85,6 +88,31 @@ class TransferCollection():
             }
             transfers_formatted.append(transfer_dict)
         return {'Ambulance Transfers':transfers_formatted}
+
+
+    def generateCSVData(self):
+        trans_first_hosp = list()
+        trans_trauma = list()
+        trans_spinal = list()
+        items_sorted = sorted(self._items, key=lambda x: int(x.id))
+
+        for transfer in items_sorted:
+            transfer_dict = {
+                'ppn': transfer.id,
+                'pickup_lat': transfer.pickup_lat,
+                'pickup_long': transfer.pickup_lon,
+            }
+            trans_first_hosp.extend(self.__createDict(transfer_dict, transfer.getFirstHospitalData()))
+            trans_trauma.extend(self.__createDict(transfer_dict, transfer.getHospitalsOfDataType('trauma')))
+            trans_spinal.extend(self.__createDict(transfer_dict, transfer.getHospitalsOfDataType('spinal')))
+        return (trans_first_hosp, trans_trauma, trans_spinal)
+
+    def __createDict(self, transfer_dict, trips_list):
+        hosp_list = list()
+        if trips_list is not None:
+            for trip in trips_list:
+                hosp_list.append({**transfer_dict, **trip})
+        return hosp_list
 
     @staticmethod
     def csvParser(csv_filename:str, hospital_collection:'HospitalCollection'):
@@ -104,5 +132,4 @@ class TransferCollection():
                                 row['pickup_longitude'], hospital)
                 csv_transfer.add(trans)
             return csv_transfer
-
 
