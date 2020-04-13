@@ -1,22 +1,20 @@
 from private import APIKEY, API_ENDPOINT
+from lib.Ambulance import TransferCollection
+from lib.Hospital import Hospital, HospitalCollection
+from lib.utils import hospitalTransfers, serialize
+
 import requests
-import urllib
+import googlemaps
+import json
+
 
 file_csv = 'Ambulance GIS and hospital address data sample.csv'
 
-lat_origin = -34.790257
-lon_origin = 150.56216
+hosp_collection = HospitalCollection.hospitalScraper(file_csv)
 
-lat_dest = 	-34.868135
-lon_dest = 150.595159
+transfer_collection = TransferCollection.csvParser(file_csv, hosp_collection)
+transfer_collection.getHospitalsWithin(3600, hosp_collection)
 
-parameters = {
-    'origins':f'{lat_origin},{lon_origin}',
-    'destinations':f'{lat_dest},{lon_dest}',
-    'key':APIKEY
-}
-
-response = requests.get(API_ENDPOINT, params = parameters)
-
-print(response.status_code)
-print(response.json())
+json_ready_data = transfer_collection.generateJSONData()
+with open('data.json', 'w', encoding='utf-8') as f:
+    json.dump(json_ready_data, f, ensure_ascii=False, indent=4, default=serialize)
