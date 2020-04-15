@@ -57,7 +57,7 @@ def serialize(obj):
 
 
 def writeCSV(filename, csv_data):
-    csv_columns = ['ppn', 'pickup_lat', 'pickup_long', 'hospital', 'time', 'distance']
+    csv_columns = csv_data[0].keys()
     try:
         with open(filename, 'w') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
@@ -66,3 +66,4 @@ def writeCSV(filename, csv_data):
                 writer.writerow(data)
     except IOError:
         print("I/O error")
+

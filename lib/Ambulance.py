@@ -19,7 +19,7 @@ class Transfer():
         self.pickup_lat = lat
         self.pickup_lon = lon
         self.hospital = hospital
-        
+        self.def_hospital = None
         self.feasible_transfers = list()
 
     def __len__():
@@ -31,14 +31,22 @@ class Transfer():
     def getFirstHospitalData(self):
         for trans in self.feasible_transfers:
             if trans['hospital'] == self.hospital:
-                return [trans]
+                return trans
     
     def getHospitalsOfDataType(self, hosp_type):
         return [trans for trans in self.feasible_transfers if 
                 (trans['hospital'].type == hosp_type) and not(trans['hospital'] == self.hospital)]
 
+    def getHospitalByAttr(self, key, value):
+        return [trans for trans in self.feasible_transfers if 
+                (getattr(trans['hospital'], key) == value) and not(trans['hospital'] == self.hospital)]
 
+    def getMinByDistance(self, key, value):
+        trips = self.getHospitalByAttr(key, value)
+        if trips:
+            return min(trips, key=lambda x:x['distance'])
 
+        
 
 class TransferCollection():
     '''A collection of ambulance transfers
@@ -91,28 +99,44 @@ class TransferCollection():
 
 
     def generateCSVData(self):
-        trans_first_hosp = list()
-        trans_trauma = list()
-        trans_spinal = list()
+        trans = list()
         items_sorted = sorted(self._items, key=lambda x: int(x.id))
 
         for transfer in items_sorted:
+            first_hosp_data = transfer.getFirstHospitalData()
+            min_dist_trauma = transfer.getMinByDistance('type', 'trauma')
+            min_dist_spinal = transfer.getMinByDistance('type', 'spinal')
+            first_hosp_dict = self.__createDict("First", first_hosp_data)
+            trauma_hosp_dict = self.__createDict("Trauma", min_dist_trauma, True)
+            spinal_hosp_dict = self.__createDict("Spinal", min_dist_spinal, True)
+            print(spinal_hosp_dict)
             transfer_dict = {
                 'ppn': transfer.id,
                 'pickup_lat': transfer.pickup_lat,
                 'pickup_long': transfer.pickup_lon,
+                'First Hospital': transfer.hospital,
+                'Final Hospital': None,
+                'Time to First Hospital': first_hosp_data['time'], 
+                'Distance to First Hospital': first_hosp_data['distance'],
+                'Time to Nearest Trauma Hospital': min_dist_trauma['time'],
+                'Distance to Nearest Trauma Hospital': min_dist_trauma['distance'],
+                'Time to Nearest Spinal Hospital': min_dist_spinal['time'],
+                'Distance to Nearest Spinal Hospital': min_dist_spinal['distance'],
             }
-            trans_first_hosp.extend(self.__createDict(transfer_dict, transfer.getFirstHospitalData()))
-            trans_trauma.extend(self.__createDict(transfer_dict, transfer.getHospitalsOfDataType('trauma')))
-            trans_spinal.extend(self.__createDict(transfer_dict, transfer.getHospitalsOfDataType('spinal')))
-        return (trans_first_hosp, trans_trauma, trans_spinal)
+            trans.append(transfer_dict)
+        return trans
 
-    def __createDict(self, transfer_dict, trips_list):
+    def __createDict(self, hosp_criteria, trip, set_hosp=False):
         hosp_list = list()
-        if trips_list is not None:
-            for trip in trips_list:
-                hosp_list.append({**transfer_dict, **trip})
-        return hosp_list
+        holding_dict = {
+            f"Time to {hosp_criteria} Hospital": trip['time']/60,
+            f"Distance to {hosp_criteria} Hospital": trip['distance']/1000
+        }
+        if set_hosp:
+              holding_dict[f"Nearest {hosp_criteria} Hospital"] = trip['hospital']
+
+        return holding_dict
+
 
     @staticmethod
     def csvParser(csv_filename:str, hospital_collection:'HospitalCollection'):
@@ -129,7 +153,6 @@ class TransferCollection():
                 first_hosp_name = row['destination_name'].replace(' Hosp', '')
                 hospital = hospital_collection.getByName(first_hosp_name)
                 trans = Transfer(row['ppn'],row['pickup_latitude'], 
-                                row['pickup_longitude'], hospital)
+                                row['pickup_longitude'], hospital, )
                 csv_transfer.add(trans)
             return csv_transfer
-

@@ -1,7 +1,7 @@
 from typing import Optional, List
 import csv
 
-specialist_spinal = ['Royal North Shore', 'Prince of Wales']
+specialist_spinal = ['Prince Of Wales','Royal North Shore']
 
 
 class Hospital():
@@ -26,7 +26,7 @@ class Hospital():
                 and self.type == other.type)
 
     def __str__(self):
-        return f"{self.name} Hospital is of type {self.type} at {self.address}" 
+        return f"{self.name} Hospital" 
 
     def __repr__(self):
         return f"{self.name} Hospital"
@@ -101,6 +101,7 @@ class HospitalCollection():
                 hosp_name = row['destination_name'].replace(' Hosp', '')
                 #Only add new hospitals to collection
                 if hosp_name not in hospital_names:
+                    print(hosp_name)
                     new_hosp = Hospital(name = hosp_name, 
                                         address = row['first_hosp_address'], 
                                         hosp_type = getHospitalType(hosp_name))
